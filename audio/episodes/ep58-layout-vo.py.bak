@@ -1,0 +1,30 @@
+# ep58: xếp lời thoại lên phách THẬT của nhạc user gửi (beats.json, ~112 BPM, 1 ô nhịp = 4 phách ≈ 2,13 s).
+# Chuyển cảnh bắt đầu đúng nửa ô nhịp; 4 từ khóa (lo âu, 91,4%, chạy, một lần) rơi đúng vạch đầu ô nhịp (cú nhấn của nhạc).
+import json,math,re
+m=json.load(open('public/audio/ep58-su-tu/vo/meta.json')); cues=json.load(open('src/episodes/ep58-su-tu/cues.json'))
+B=json.load(open('src/episodes/ep58-su-tu/beats.json')); bar=lambda k:B[4*k]
+next_beat=lambda t,step:min(i for i in range(0,len(B),step) if B[i]>=t-1e-6)
+SCENE={4,7,9,10,12,14,20,24}            # câu mở cảnh mới -> vào đúng nửa ô nhịp
+HIT={3:'lo âu',13:'91,4%',15:'chạy',19:None}   # từ khóa rơi đúng vạch ô nhịp (None = đầu câu)
+GAP={1:0.5,5:0.5,11:0.5,16:0.3,17:0.4,21:0.6,22:0.5,23:0.5}
+t=bar(0)+0.8; out=[]; hits=[]
+for i,x in enumerate(m):
+    disp=re.sub(r'[【】]','',cues[i]); toks=disp.split(' '); ws=[w[0] for w in x['words']]
+    times=[]; wi=0; last=0.1
+    for j,tok in enumerate(toks):
+        tt=ws[wi] if wi<len(ws) else last; wi+=1
+        last=tt; times+=[round(tt,3)]*len(tok)+([round(tt,3)] if j<len(toks)-1 else [])
+    assert len(times)==len(disp)
+    if i in HIT:
+        off=times[disp.lower().index(HIT[i])] if HIT[i] else times[0]
+        k=next_beat(t+off,4)//4; t=bar(k)-off; hits.append(k)
+    elif i in SCENE:
+        t=B[next_beat(t,2)]
+    sp=x['words'][-1][1]+0.08
+    out.append({'start':round(t,3),'end':round(t+sp,3),'times':times})
+    t+=sp+GAP.get(i+1,0.3)
+bars=next_beat(t+3,4)//4
+json.dump(out,open('src/episodes/ep58-su-tu/vo.json','w'),ensure_ascii=False)
+json.dump({'end':round(bar(bars)+0.5,2),'bars':bars,'hits':hits},open('src/episodes/ep58-su-tu/layout.json','w'))
+print('hits',hits,'bars',bars,'end',round(bar(bars)+0.5,1))
+for i,o in enumerate(out): print(i,o['start'],o['end'])

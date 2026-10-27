@@ -1,0 +1,41 @@
+/**
+ * ep59 Tấm lưới（越南语，丝线星图风竖屏 1080×1920，无口播，配乐 = 用户给的曲子，同 ep58）。
+ * 参考 #vibe知识大赏「人生的容错率大到超出你的想象」：一根线 → 被砸断 → 长出新枝 → 织成网。
+ */
+import CUE_TEXT from './cues.json';
+import LAYOUT from './layout.json';
+import VO_DATA from './vo.json';
+import BEATS_DATA from './beats.json';
+
+export const FPS = 30;
+export const W = 1080;
+export const H = 1920;
+export const fr = (sec: number) => Math.round(sec * FPS);
+export const DURATION = fr(LAYOUT.end);
+
+export const CUES: string[] = CUE_TEXT as string[];
+export const VO = VO_DATA as {start: number; end: number; times: number[]}[];
+export const V = (i: number) => fr(VO[i].start);
+export const VE = (i: number) => fr(VO[i].end);
+/** 第 i 句第 j 个字符出现的帧 */
+export const CT = (i: number, j: number) => {
+  const n = VO[i].times.length;
+  const m = Math.max(2, CUES[i].replace(/[【】]/g, '').length);
+  const k = Math.min(n - 1, Math.round((j * (n - 1)) / (m - 1)));
+  return fr(VO[i].start + (VO[i].times[k] ?? 0));
+};
+/** 第 i 句里某个词出现的帧 */
+export const WORD = (i: number, w: string) => {
+  const t = CUES[i].replace(/[【】]/g, '');
+  const k = t.indexOf(w);
+  return CT(i, Math.max(0, k));
+};
+export const cueStart = (i: number) => V(i) - 4;
+export const cueEnd = (i: number) => Math.min(i + 1 < CUES.length ? V(i + 1) - 6 : DURATION, VE(i) + fr(1.4));
+
+/** Lưới nhịp = phách thật của nhạc nền (beats.json, ~112 BPM) — chuyển cảnh và cú nhấn canh theo phách */
+export const BEATS: number[] = BEATS_DATA as number[];
+export const barF = (k: number) => fr(BEATS[Math.min(4 * k, BEATS.length - 1)]);
+export const beatF = (b: number) => fr(BEATS[Math.min(b, BEATS.length - 1)]);
+export const BARS: number = LAYOUT.bars;
+export const HITS: number[] = (LAYOUT.hits as number[]).map(barF);
